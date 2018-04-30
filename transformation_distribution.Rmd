@@ -1,6 +1,6 @@
 ---
 title: "Homework: Data Distribution and Transformation"
-author: "Amanda Schaffer, Pasupathi Jagadeesan, Brenna Craft, Mike Bouchard, Syam Kumar"
+author: "Brenna Craft"
 date: "April 19, 2018"
 output: 
   html_document:
