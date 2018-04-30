@@ -1,0 +1,196 @@
+---
+title: "Homework: Data Distribution and Transformation"
+author: "Amanda Schaffer, Pasupathi Jagadeesan, Brenna Craft, Mike Bouchard, Syam Kumar"
+date: "April 19, 2018"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: true
+    theme: spacelab
+---
+# Description
+The exercises below are based on the `health.sav` survey data. This data is stored in SPSS format so you will need to use the `foreign::read.spss()` function in the `foreign` library to import them. The data is a subset of the 1991 General Social Survey in Canada, containing 6363 observations. The variables relevant to the exercises below are:
+
++ `HHINCOME`: The respondent's household income
++ `HAPPY`: A scale measuring happiness that ranges from 10 (unhappy) to 30 (extremely happy)
++ `SEX`
++ `CLASS`: The respondents social class (measured using a modification of the Goldthorpe class schema)
+
+
+# Loading Relevant Packages
+
+Most of the functions you will need are in the `car` and `sm` packages, but you might want to experiment with some of the functions from other packages as well (e.g., `foreign`, `MASS`). 
+Here are some packages you will probably want to load. You may have to install these packages if you haven't before. Also, if you use other packages in the rest of your code, add the packages to this list.
+
+```{r message=FALSE}
+#install.packages ("foreign", dependencies=TRUE)
+#install.packages ("car", dependencies=TRUE)
+#install.packages ("sm", dependencies=TRUE)
+#install.packages ("lattice", dependencies=TRUE)
+```
+
+```{r message=FALSE, warning=FALSE}
+library (foreign)
+library (car)
+library (sm)
+library (lattice)
+```
+
+# Get Familiar with the Data
+
+```{r}
+survey.data<-foreign::read.spss('C:/Users/brecraft/Documents/health.sav', to.data.frame = TRUE)
+head (survey.data, 3)
+write.csv(survey.data, file('C:/Users/brecraft/Documents/health.csv'))
+summary(survey.data)
+```
+
+# Q1: Visual Exploration of `HAPPY`
+
++ Report and visualize summary statistics for `HAPPY`: central tendencity and variability, and the number of unique values.
++ Using the `split.screen()` function, plot the following graphs on the same device: 
+    * `screen(n=1)`: A histogram with density estimate for `HAPPY`: use `hist()` and `lines (density(...))`. Make sure that the number of bins is much less than the number of unique values.
+    * `screen(n=2)`: A density estimate that includes a normal reference band: `sm.density(..., model="normal", h=0.46, ...)` 
+    * Give each graph a title and make sure that they have the same values on the $y$-axis: `ylim=c(0, 0.15)` and `xlim=c(10, 30)`. 
++ What can you say about the distribution of `HAPPY`?
+
+The distribution of Happy is left skewed. 
+
+
+```{r, echo=FALSE}
+summary(survey.data$HAPPY)
+sd(survey.data$HAPPY)
+
+length(unique(survey.data$HAPPY))
+ 
+```
+
+```{r, echo=FALSE}
+split.screen(c(1,2))
+screen(1, new = TRUE)
+hist(survey.data$HAPPY, ylim=c(0, 0.15),xlim=c(10, 30), main="Histogram of Happiness", probability=TRUE, col="gray", border="white", xlab="Happiness")
+    d <- density(survey.data$HAPPY)
+    lines(d, col="slategray3")
+
+screen(2,new = TRUE)
+sm.density(survey.data$HAPPY, model = "Normal", main="Density of Happiness", xlim=c(10, 30), col="black", xlab="Happiness", h=0.46)
+```
+
+
+#Q2: Explore Normality for `HAPPY`
+
++ `screen(n=1)`: Construct a boxplot
++ `screen(n=2)`: Construct a quantile-comparison for `HAPPY` (`car::qqPlot()`)
+
+```{r, echo=FALSE, warning=FALSE}
+split.screen(c(1,2))
+screen(1, new = TRUE)
+boxplot(survey.data$HAPPY, col ="slategray3", horizontal=TRUE, main="Box Plot for Happiness")
+screen(2,new = TRUE)
+qqPlot(survey.data$HAPPY, col="slategray3", main="Quartile Comparison")
+```
++ Construct side-by-side boxplots for `HAPPY` for men and women separately (use `variabl1~variable2` as the boxplot formula 
+
+```{r, echo=FALSE}
+boxplot(survey.data$HAPPY~survey.data$SEX, col=c("azure3", "slategray3"))
+```
++ Describe the distribution based on these graphs
++ Do you see anything new that you didn't notice in the histogram?
+
+These plots confirm a tail with a few outliers. The distribution is mostly normal at about 20 and higher and the distribution for men and women is very similar.
+
+# Q3: Jitter ScatterPlots: `HAPPY` vs. `HHINCOME`
+
++ Construct two scatterplots of `HHINCOME (x)` and `HAPPY (y)`, placing them side-by-side.
+    * `screen(n=1)`: plot the original data 
+    * `screen(n=2)`: jitter both `HHINCOME` and `HAPPY`. Happiness should be jittered by a factor of 2, and Income should be jittered by a factor of 3. 
+    * Give sensible labels to the $x$ and $y$ axes, and give each of the graphs a title. 
+e?
+
+```{r, echo=FALSE, warning=FALSE}
+split.screen(c(1,2))
+screen(1, new = TRUE)
+plot(survey.data$HAPPY~survey.data$HHINCOME, col="slategray3", main="Happy vs Income", ylab="Happy", xlab="Income")
+screen(2,new = TRUE)
+plot(jitter(survey.data$HAPPY, factor=2)~jitter(survey.data$HHINCOME, factor=3), col="slategray3", main="Happy vs Income, Jittered", ylab="Happy", xlab="Income")
+```
+
++ Is there any noticeable pattern between the two variables? 
++ What does jittering do for us here
+
+Both income and happiness congregate in the upper range, but it is very hard to see the what the jittering does for us, because of the extreme overlap.
+
+
+# Q4: Joint Bi-variate Density Estimates
+
++ Using the `sm.density()` function in the `sm` package, construct a joint bi-variate density estimate for `HHINCOME` and `HAPPY`:
+    * `screen(n=1)`: Contour Plot (`display="slice"`)
+    * `screen(n=2)`: Image Plot (`display="image"`)
+
+
+```{r, echo=FALSE, warning=FALSE}
+data = cbind(survey.data$HAPPY, survey.data$HHINCOME)
+split.screen(c(1,2))
+screen(1, new = TRUE)
+sm.density(data, display="slice", ylab="Income", xlab="Happy", props=seq(from=5, to=95, by=10))
+screen(2,new = TRUE)
+sm.density(data, display="image", ylab="Income", xlab="Happy")
+```
+
++ Describe what you see.
+This is a density heat map that shows that, similar to what we see with the Jitter plot, there is a higher density in the upper range. 
+
+# Q5: Conditional Scatterplot
+
++ Use the `car::scatterplot()` to plot the relationship between `HAPPY` and HHINCOME, conditional on `CLASS`
+
+```{r, echo=TRUE, warning=FALSE}
+scatterplot(jitter(survey.data$HAPPY,2) ~ jitter(survey.data$HHINCOME,2)|survey.data$CLASS, reg.line=F, smooth=T, col=c('darkgrey', 'darkorchid1', 'tomato2', 'deepskyblue3', 'burlywood'),xlab="Income", ylab="Happy")
+```
++ Use the `lattice::xyplot()` function to plot the relationship between `HAPPY` and HHINCOME, conditional on `CLASS`.
+```{r, echo=TRUE, warning=FALSE}
+lattice::xyplot(jitter(survey.data$HAPPY,2) ~ jitter(survey.data$HHINCOME, 3) |
+  survey.data$CLASS, 
+  xlab="Household Income",
+  ylab="Happiness", 
+  main="Happiness and Household Income Conditional on Class",
+  panel=function(x, y){
+    panel.xyplot(jitter(x, 2), jitter(y, 2), col='peachpuff1')
+    panel.lmline(x, y, col="blue")
+    panel.loess(x, y, col="red")
+})
+
+```
+
++ Use the `coplot()` function to explore the relationship between `HAPPY` and `HHINCOME`, conditional on both `CLASS` and `SEX`. You can read the explanation of `coplot()` here: https://stackoverflow.com/questions/29472360/how-to-read-a-coplot-graph
+
+```{r, echo=FALSE, warning=FALSE}
+coplot(jitter(survey.data$HAPPY,2) ~ jitter(survey.data$HHINCOME, 3) | survey.data$CLASS * survey.data$SEX,
+     panel=function(x,y,...) {
+          panel.smooth(x,y,span=.8,iter=5,col='aquamarine')
+          abline(lm(y ~ x), col="blue") 
+      } , xlab=c("Income", "Given: Class"), ylab=c("Happy", "Given: Sex"))
+```
++ Discuss your findings.
+
+The relationship between income and happiness is pretty flat with very slight increases of happiness associated with higher incomes. It is interesting that for self employed women, the happiness decreases very slightly with rising income.
+
+# Q6: Transformations
+
++ Using power transformations (justify the choice of powers tested), attempt to make the distribution of `HAPPY` more normal. 
++ Plot the original distribution and the final transformed distribution in quantile-comparison plots. 
++ Justify your final transformation.
+```{r}
+happy2 = survey.data$HAPPY^2
+happy3 = survey.data$HAPPY^3
+split.screen(c(2,1))
+split.screen(c(1,2), screen=1)
+screen(1)
+qqPlot(survey.data$HAPPY, ylab="HAPPY", main="Q-Q Plot, Happiness", col="paleturquoise")
+screen(2)
+qqPlot(happy2, ylab="HAPPY^2", main="Q-Q Plot, Happiness^2", col="mediumaquamarine")
+screen(3)
+qqPlot(happy3, ylab="HAPPY^3", main="Q-Q Plot, Happiness^3", col="rosybrown")
+```
+The frist transformation appears to be the most effective.
