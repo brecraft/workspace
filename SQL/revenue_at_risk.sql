@@ -1,4 +1,4 @@
-## Revenue at Risk (Mogl Revenue)
+## Revenue at Risk
 SELECT	
 	atrisk.region,
 	revenue.monthly,
