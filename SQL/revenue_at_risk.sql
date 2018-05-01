@@ -1,4 +1,5 @@
-## Revenue at Risk
+## Query to Calculate Revenue at Risk
+
 SELECT	
 	atrisk.region,
 	revenue.monthly,
