@@ -1,5 +1,5 @@
 ---
-title: "Homework: Data Distribution and Transformation"
+title: "Data Distribution and Transformation"
 author: "Brenna Craft"
 date: "April 19, 2018"
 output: 
