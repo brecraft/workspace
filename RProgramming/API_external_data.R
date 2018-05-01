@@ -1,3 +1,6 @@
+#This script is used to connect to an API and create a data frame from the response
+#Developed by Brenna Craft
+
 library(httr,jsonlite,lubridate)
 
 # API Password: e6a6326f-32e9-490c-a550-0fce0fe89d55
