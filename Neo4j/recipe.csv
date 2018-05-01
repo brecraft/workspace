@@ -1,0 +1,13 @@
+recipe_id:ID(Recipe),recipe_name,recipe_type,prep_time,total_time,instructions_link,serves ,calories_per_serving,vegetarian,slow cooker
+1,Tuscan Ribollita Soup,main,10,30,https://drive.google.com/open?id=0B8szS5cobTKxWmc1dlJTYXRCd1k,4,650 ,1,0
+2,Slow Cooker Borscht,main,20,360,https://drive.google.com/open?id=0B8szS5cobTKxR0FZM0lVQlpDVTQ,4,382,1,1
+3,Slow Cooker Minestrone,main,15,360,https://drive.google.com/file/d/0B8szS5cobTKxTWpEbVIwYVdfVWc/view?usp=sharing,4,336,1,1
+4,"Wild Rice Salad with Beets, Grapes and Pecans",salad,30,60,https://drive.google.com/file/d/0B8szS5cobTKxREhkTThjbVpQMUU/view?usp=sharing,4,,1,0
+5,"Indian-Style Curry with Potatoes, Cauliflower, Peas, and Chickpeas",main,30,65,https://www.cooksillustrated.com/recipes/3571-indian-style-curry-with-potatoes-cauliflower-peas-and-chickpeas,6,,1,0
+6,"Wilted Spinach Salad with Feta, Olives, and Lemon Vinaigrette",salad,30,45,https://www.cooksillustrated.com/recipes/177-wilted-spinach-salad-with-feta-olives-and-lemon-vinaigrette?extcode=MASCD00L0&ref=new_search_experience_5,4,,1,0
+7,Reggae Rice and Sweet Potato Salad,salad,30,35,https://www.cookscountry.com/recipes/3774-reggae-rice-and-sweet-potato-salad?extcode=MASKD00L0&ref=new_search_experience_12,6,,1,0
+8,Fiesta Bowl w/ Mexican Rice,main,10,40,http://www.traderjoes.com/recipes/recipe/308,4,704,1,0
+9,Potato Chowder with Cheddar Cheese,main,15,45,https://www.blueapron.com/recipes/potato-chowder-with-cheddar-cheese-toast,2,660,1,0
+10,Huevos Rancheros,main,,,https://www.cookscountry.com/recipes/8000-huevos-rancheros?extcode=MASKD00L0&ref=new_search_experience_150,,,1,0
+11,Beluga Lentil Stew & Squash Agrodolce,main,15,35,https://www.blueapron.com/recipes/beluga-lentil-stew-squash-agrodolce-with-rosemary-breadsticks,2,700,1,0
+12,Slow-Cooker Vegetarian Pho,main,,,https://www.americastestkitchen.com/recipes/9231-slow-cooker-vegetarian-pho?incode=MASAD00L0&ref=new_search_experience_1,,,1,1
