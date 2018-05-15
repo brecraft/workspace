@@ -1,0 +1,416 @@
+---
+title: "Project: End-to-End Supervised Modeling Pipeline"
+author: "Brenna Craft, Michael BOuchard, Miguel Gutierrez, Gaurav Khanna, Abhijeet Garde"
+date: "May 11, 2018"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: true
+    theme: spacelab
+---
+
+# Data Description
+The exercises below are based on the `health.sav` survey data. This data is stored in SPSS format so you will need to use the `foreign::read.spss()` function in the `foreign` library to import them. The data is a subset of the 1991 General Social Survey in Canada, containing 6363 observations. The variables relevant to the exercises below are:
+
++ `HHINCOME`: The respondent's household income
++ `HAPPY`: A scale measuring happiness that ranges from 10 (unhappy) to 30 (extremely happy)
++ `SEX`
++ `CLASS`: The respondents social class (measured using a modification of the Goldthorpe class schema)
+
+# Goals
+
+The goal of this project is to start building an end-to-end pipeline for _supervised_ learning including various steps such as (not necessarily performed in this order):
++ _data preparation_: e.g., transformations, feature selection
++ _data splitting_: for model learning, validating, and testing
++ _building the linear regression_ model: using `HAPPY` as the _response variable_ and the other features mentioned in the Data Description section as predictors; you may add other features as well
++ _tuning up the model_: experimenting with different parameters and other choices made 
++ _testing the deployment model_
+
+
+# Loading Relevant Packages
+
+Most of the functions you will need are in the `car` and `sm` packages, but you might want to experiment with some of the functions from other packages as well (e.g., `foreign`, `MASS`). 
+Here are some packages you will probably want to load. You may have to install these packages if you haven't before. Also, if you use other packages in the rest of your code, add the packages to this list.
+
+```{r message=FALSE}
+#install.packages ("foreign", dependencies=TRUE)
+#install.packages ("car", dependencies=TRUE)
+#install.packages ("sm", dependencies=TRUE)
+#install.packages ("lattice", dependencies=TRUE)
+```
+
+```{r message=FALSE, warning=FALSE}
+library (foreign)
+library (car)
+library (sm)
+library (lattice)
+library(e1071)
+```
+
+# Examine Basic Summary Statistics
+
+```{r}
+survey.data<-foreign::read.spss('C:/Users/brecraft/Documents/health.sav', to.data.frame = TRUE)
+head (survey.data, 3)
+write.csv(survey.data, file('C:/Users/brecraft/Documents/health.sav'))
+summary(survey.data)
+dim (survey.data)
+```
+
+# Perform Visual Exploratory Analysis
+
+__YOU ARE NOT EXPECTED TO DO ANYTHING FOR THIS SECTION__
+
+## Visual Exploration of `HAPPY`
+
++ Report and visualize summary statistics for `HAPPY`: central tendencity and variability, and the number of unique values.
++ Using the `split.screen()` function, plot the following graphs on the same device: 
+    * `screen(n=1)`: A histogram with density estimate for `HAPPY`: use `hist()` and `lines (density(...))`. Make sure that the number of bins is much less than the number of unique values.
+    * `screen(n=2)`: A density estimate that includes a normal reference band: `sm.density(..., model="normal", h=0.46, ...)` 
+    * Give each graph a title and make sure that they have the same values on the $y$-axis: `ylim=c(0, 0.15)` and `xlim=c(10, 30)`. 
++ What can you say about the distribution of `HAPPY`?
+
+```{r, echo=TRUE}
+summary (survey.data$HAPPY)
+sd(survey.data$HAPPY)
+length(unique(survey.data$HAPPY))
+```
+
+```{r, echo=TRUE}
+split.screen(c(1,2))
+screen(n=1)
+hist(survey.data$HAPPY, xlab="Happiness", ylab="Density", prob=T, main="",
+     col="lightblue", nclass=21, axes=F, ylim=c(0, 0.15))
+axis(1)
+axis(2, at=c(0, 0.05, 0.1, 0.15))
+title("Histogram of Happiness")
+lines(density(survey.data$HAPPY, bw=0.46))
+
+screen(n=2)
+sm.density(survey.data$HAPPY, model="normal", xlab="Happiness", ylab="Density",
+           xlim=c(10, 30), ylim=c(0, 0.15), h=0.46)
+title("Density of Happiness")
+```
+
+## Explore Normality for `HAPPY`
+
++ `screen(n=1)`: Construct a boxplot
++ `screen(n=2)`: Construct a quantile-comparison for `HAPPY` (`car::qqPlot()`)
++ Construct side-by-side boxplots for `HAPPY` for men and women separately (use `variabl1~variable2` as the boxplot formula 
+
+```{r, echo=TRUE, warning=FALSE}
+split.screen(c(1,2))
+screen(n=1)
+boxplot(survey.data$HAPPY, ylab="Happiness", col="lightblue")
+title("Boxplot of Happiness")
+screen(n=2)
+car::qqPlot(survey.data$HAPPY, col="lightblue", ylab="Happiness")
+title("Q-Q Plot of Happiness")
+```
+
+```{r, echo=TRUE}
+boxplot(survey.data$HAPPY ~ survey.data$SEX, 
+        col="lightblue", horizontal=TRUE)
+title("Boxplot of Happiness for Men and Women")
+```
+
+## Jitter ScatterPlots: `HAPPY` vs. `HHINCOME`
+
++ Construct two scatterplots of `HHINCOME (x)` and `HAPPY (y)`, placing them side-by-side.
+    * `screen(n=1)`: plot the original data 
+    * `screen(n=2)`: jitter both `HHINCOME` and `HAPPY`. Happiness should be jittered by a factor of 2, and Income should be jittered by a factor of 3. 
+    * Give sensible labels to the $x$ and $y$ axes, and give each of the graphs a title. 
+
+```{r, echo=TRUE, warning=FALSE}
+split.screen(c(1,2))
+screen(n=1)
+plot(survey.data$HAPPY ~ survey.data$HHINCOME, 
+     xlab="Household Income", 
+     ylab="Happiness",
+     main="Scatterplot of Income and Happiness")
+screen(n=2)
+plot(jitter(survey.data$HAPPY, 2) ~ jitter(survey.data$HHINCOME, 3), 
+     xlab="Household Income",
+     ylab="Happiness", 
+     main="Jittered Scatterplot of Income and Happiness")
+```
+
+## Joint Bi-variate Density Estimates
+
++ Using the `sm.density()` function in the `sm` package, construct a joint bi-variate density estimate for `HHINCOME` and `HAPPY`:
+    * `screen(n=1)`: Contour Plot (`display="slice"`)
+    * `screen(n=2)`: Image Plot (`display="image"`)
+
+```{r, echo=TRUE, warning=FALSE}
+split.screen(c(1,2))
+screen(n=1)
+sm.density(cbind(survey.data$HHINCOME, survey.data$HAPPY),
+           display="slice",
+           props=seq(from=5, to=95, by=10), 
+           ylab="Happiness",
+           xlab="Household Income")
+title("Bivariate Density of Income \n and Happiness (Contour Plot)")
+screen(n=2)
+sm.density(cbind(survey.data$HHINCOME, survey.data$HAPPY),
+           display="image",
+           props=seq(from=5, to=95, by=10), 
+           ylab="Happiness", xlab="Household Income")
+title("Bivariate Density of Income \n and Happiness (Image Plot)")
+```
+
+## Conditional Scatterplot
+
++ Use the `car::scatterplot()` to plot the relationship between `HAPPY` and HHINCOME, conditional on `CLASS`
++ Use the `lattice::xyplot()` function to plot the relationship between `HAPPY` and HHINCOME, conditional on `CLASS`.
++ Use the `coplot()` function to explore the relationship between `HAPPY` and `HHINCOME`, conditional on both `CLASS` and `SEX`. You can read the explanation of `coplot()` here: https://stackoverflow.com/questions/29472360/how-to-read-a-coplot-graph
+
+
+```{r, echo=TRUE, warning=FALSE}
+scatterplot(jitter(survey.data$HAPPY,2) ~ jitter(survey.data$HHINCOME,2) | survey.data$CLASS,
+reg.line=F, smooth=T)
+```
+
+```{r, echo=TRUE, warning=FALSE}
+lattice::xyplot(jitter(survey.data$HAPPY,2) ~ jitter(survey.data$HHINCOME, 3) |
+  survey.data$CLASS, 
+  xlab="Household Income",
+  ylab="Happiness", 
+  main="Happiness and Household Income Conditional on Class and Sex",
+  panel=function(x, y){
+    panel.xyplot(jitter(x, 2), jitter(y, 2), col="lightblue")
+    panel.lmline(x, y, col="blue")
+    panel.loess(x, y, col="red")
+})
+
+```
+
+```{r, echo=TRUE, warning=FALSE}
+coplot(jitter(survey.data$HAPPY,2) ~ jitter(survey.data$HHINCOME, 3) | survey.data$CLASS + survey.data$SEX, 
+            panel=panel.car, 
+            xlab=c("Income", "Given: Class"),
+            ylab=c("Happiness", "Given: Sex"))
+```
+
+# Q1: Split Data for Model Building, Validation, and Testing
+
++ Split the data into three subsets:
+  * _training_: `train.survey`
+  * _validation_: `validate.survey`
+  * _testing_: `test.survey`
+  
+```{r, echo = TRUE}
+
+
+set.seed (2018)
+index <- set.seed (2018)
+index <- sample(1:dim(survey.data)[1])
+head (index)
+
+n <- dim(survey.data)[1] # the number of records/cases
+# top 60%
+survey.train <- survey.data [index[1:floor(n * 0.6)], ] 
+n.survey.train <- length (survey.train [, "AGE"])
+survey.validation <- survey.data [index[(n.survey.train + 1):floor(n * 0.8)], ] # next 20%
+n.survey.validation <- length (survey.validation [, "AGE"])
+survey.test <- survey.data [index[(n.survey.train + n.survey.validation + 1):n], ] # last 20%
+n.survey.test = length (survey.test [, "AGE"])
+
+n.survey.train + n.survey.validation + n.survey.test
+summary(survey.train$HAPPY)
+summary(survey.validation$HAPPY)
+summary(survey.test$HAPPY)
+
+
+
+```
+
+# Q2: Apply Transformations to Training Data, `survey.train`
+
++ Using power transformations (justify the choice of powers tested), attempt to make the distribution of `HAPPY` more normal. 
++ Plot the original distribution and the final transformed distribution in quantile-comparison plots. 
++ Convert `HHINCOME` to the Z-scores
+
+```{r, echo=TRUE, warning=TRUE}
+# Since we need to bring in the smaller values, 
+# we should ascend the ladder of powers. 
+# Thus, we should look for powers higher than one. 
+# Probably 2 and 3 would be good places to start.
+# It looks like Happiness squared is 
+# the appropriate transformation to the data.
+
+split.screen(c(1,2))
+screen(n=1)
+hist(survey.train$HAPPY, xlab="Happiness", ylab="Density", prob=T, main="",
+     col="lightblue", nclass=21, axes=F, ylim=c(0, 0.15))
+axis(1)
+axis(2, at=c(0, 0.05, 0.1, 0.15))
+title("Histogram of Test-Happiness")
+lines(density(survey.train$HAPPY, bw=0.46))
+
+
+pwr_happy<-survey.train$HAPPY*survey.train$HAPPY
+survey.train<-cbind(survey.train,pwr_happy)
+
+
+hist((survey.train$pwr_happy), xlab="pwr_happy", ylab="Density", prob=T, main="",
+     col="lightblue", nclass=16, axes=F, ylim=c(0, 500))
+axis(1)
+axis(2)
+     #, at=c(0, 0.05, 0.1, 0.15))
+title("Histogram of Test-pwr_happy")
+lines(density(survey.train$pwr_happy, bw=0.46))
+
+hist(survey.train$pwr_happy)
+hist(survey.train$HAPPY)
+
+
+
+#Convert `HHINCOME` to the Z-scores
+survey.train$HHINCOME <- scale(survey.train$HHINCOME)
+survey.train$HHINCOME
+
+```
+survey.train$HHINCOME
+
+
+# Q3: Build the Linear Regression Model
+
+Use the _transformed training data_ from Q2, to build the linear regression model (see documentation and examples for `lm()` function:
+
+
+```{r, echo=TRUE, warning=TRUE}
+
+model <- lm(formula = pwr_happy ~ HHINCOME, data=survey.train)
+
+model
+```
+
+
+# Q4: Make Predictions for the Validation Data, `validate.survey`
+
++ BE CAREFUL: what transformations you need to apply to the `validate.survey` data before making the predictions
++ See proper documentation: `help(predict.lm)` and `example(predict.lm)`
+
+```{r, echo=TRUE, warning=TRUE}
+
+#Apply Transformation to survey.validation
+survey.validation$HHINCOME <- scale(survey.validation$HHINCOME)
+
+pwr_happy<-survey.validation$HAPPY*survey.validation$HAPPY
+survey.validation<-cbind(survey.validation,pwr_happy)
+
+
+prediction <- predict(model, survey.validation)
+
+```
+
+# Q5: How Good are the Predictions?
+
++ Compute the proximity between the _predictions_ and the _ground-truth_ for the `validate.survey` data
++ Have you done any transformations to the ground_truth values of the response variable of the `validate.survey`? Why?
++ Justify the choice of your proximity measure
+
+```{r, echo=TRUE, warning=TRUE}
+
+prediction <- predict(model, survey.validation)
+table (prediction)
+  
+ground.truth <- survey.validation$pwr_happy
+table (ground.truth)
+ground.truth
+
+cor (as.numeric(ground.truth), 
+     as.numeric(prediction))
+
+```
+
+# Q6: Tune the Model 
+
++ Repeat Steps Q2-Q5 for at least one other selection: changes in the types of transformations (Q2) and/or the type of predictor variables used in Q3.
++ Use the same proximity measure in Q5 as during the first iteration
+
+```{r, echo=TRUE, warning=TRUE}
+
+
+model_2 <- lm(formula = pwr_happy ~ SEX, data=survey.train)
+
+prediction_2 <- predict(model_2, survey.validation)
+table (prediction_2)
+  
+ground.truth <- survey.validation$pwr_happy
+table (ground.truth)
+
+cor (as.numeric(ground.truth), 
+     as.numeric(prediction_2), 
+     method = "spearman")
+
+#Hamming Distance
+hamming.distance(as.numeric(ground.truth), as.numeric(prediction_2))
+
+```
+
+# Q7: Compare the Models
+
++ Given two or more models you have built and the proximities between the predictions and the ground truth values from Q6, which model is better?
+
+```{r, echo=TRUE, warning=TRUE}
+
+#Income (model) is better than sex (model_2) as a predictor of happiness. 
+
+```
+
+# Q8: Build the Deployment Model
+
++ Merge `train.survey` and `validate.survey` datasets into a single data set, called `train.data`
++ Fix the parameters or choices that led to the conclusions about the better/best model in Q7
+  * Apply the transformations that correspond to the better/best model in Q7 to the `train.data`
++ Build the `deployment_model` as in Q3 but on the data transformed from the merged `train.data`  
+
+```{r, echo=TRUE, warning=TRUE}
+
+train.data <- rbind(survey.train, survey.validation)
+
+model_3 <- lm(formula = pwr_happy ~ HHINCOME, data=train.data)
+
+```
+  
+# Q9: Test the Deployment Model on `test.survey`
+
++ Make predictions using the `deployment_model` for the `test.survey` data
++ BE CAREFUL: Do you need to apply any proper transformations to the data before making the predictions
+
+```{r, echo=TRUE, warning=TRUE}
+
+#Apply Transformations to test.survey data
+survey.test$HHINCOME <- scale(survey.test$HHINCOME)
+
+pwr_happy<-survey.test$HAPPY*survey.test$HAPPY
+survey.test<-cbind(survey.test,pwr_happy)
+
+prediction_3 <- predict(model_3, survey.test)
+table (prediction_3)
+
+```
+
+# Q10: How Good is the Deployment Model
+
++ Using the same proximity measure as in Q5, assess how good the predictions of the `deployment_model` on the `test.survey` data
++ BE CAREFUL: Do you need to make any transformations to the ground_truth values of the response variable of the `test.survey` data? Why?
++ If you have to deploy this model in production, what is the likely performance you may expect?
+
+```{r, echo=TRUE, warning=TRUE}
+
+ground.truth <- survey.test$pwr_happy
+table (ground.truth)
+
+cor (as.numeric(ground.truth), 
+     as.numeric(prediction_3), 
+     method = "spearman")
+
+cor (as.numeric(ground.truth), 
+     as.numeric(prediction_3))
+
+#This is not a good model to predict. If I was going to deploy this model in production, the likely performance is very low.
+```
+
