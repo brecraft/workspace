@@ -53,7 +53,7 @@ library(e1071)
 ```{r}
 survey.data<-foreign::read.spss('C:/Users/brecraft/Documents/health.sav', to.data.frame = TRUE)
 head (survey.data, 3)
-write.csv(survey.data, file('C:/Users/brecraft/Documents/health.sav'))
+write.csv(survey.data, file('C:/Users/brecraft/Documents/health.csv'))
 summary(survey.data)
 dim (survey.data)
 ```
